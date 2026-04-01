@@ -6,17 +6,16 @@
 <title>Pixel Diary AI 🎨</title>
 <style>
 body {margin:0; font-family:sans-serif; background:#18191f; color:#eee; display:flex; flex-direction:column; align-items:center;}
-#topbar {display:flex; justify-content:center; gap:10px; margin:10px;}
+#topbar {display:flex; justify-content:center; gap:10px; margin:10px; flex-wrap:wrap;}
 button {padding:8px 12px; border:none; border-radius:8px; background:#4a4a6a; color:#fff; cursor:pointer;}
 button:hover{background:#606090;}
-#colorpicker {position:relative; width:220px; height:220px; margin:10px;}
-canvas#colorCircle {border-radius:50%;}
+#palette {margin:10px;}
+canvas#mainCanvas {border:1px solid #444; touch-action:none; margin-top:10px;}
 #calendar, #gallery {display:none; flex-wrap:wrap; justify-content:center; margin:10px;}
 .day, .thumb {width:60px; height:60px; margin:5px; display:flex; align-items:center; justify-content:center; border-radius:8px; cursor:pointer; background:#3a3a5a; color:#fff; font-weight:bold;}
 .day.hasData{background:#50a0ff;}
 .thumb canvas{width:100%; height:100%; border-radius:8px; object-fit:cover; transition: transform 0.3s;}
 .thumb:hover canvas{transform:scale(1.1);}
-canvas#mainCanvas {border:1px solid #444; touch-action:none;}
 #zoomView {position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; display:none;}
 #zoomView img{max-width:90%; max-height:90%; border-radius:12px; animation:zoomIn 0.3s;}
 @keyframes zoomIn {from{transform:scale(0)} to{transform:scale(1)}}
@@ -33,10 +32,7 @@ canvas#mainCanvas {border:1px solid #444; touch-action:none;}
     <button id="btnSave">💾 Save Image</button>
 </div>
 
-<div id="colorpicker">
-    <canvas id="colorCircle" width="220" height="220"></canvas>
-</div>
-
+<input type="color" id="colorPicker" value="#ff0000">
 <canvas id="mainCanvas" width="500" height="500"></canvas>
 
 <div id="calendar"></div>
@@ -44,16 +40,34 @@ canvas#mainCanvas {border:1px solid #444; touch-action:none;}
 <div id="zoomView"><img src="" alt="zoomed"></div>
 
 <script>
-// ======= Global =======
+// ======= Globals =======
 let canvas = document.getElementById('mainCanvas');
 let ctx = canvas.getContext('2d');
 let painting = false;
-let brushColor = '#ff0000';
+let brushColor = document.getElementById('colorPicker').value;
 let gridSize = 20;
 let rows = canvas.height / gridSize;
 let cols = canvas.width / gridSize;
 let currentDate = new Date();
-let dataStore = {}; // { 'YYYY-MM-DD': [pixels...] }
+let dataStore = {}; // will load from localStorage
+
+// ======= Color Picker =======
+document.getElementById('colorPicker').addEventListener('input',(e)=>{
+    brushColor = e.target.value;
+});
+
+// ======= Load / Save per day =======
+function saveDay(date){
+    let key = date.toISOString().slice(0,10);
+    localStorage.setItem(key, JSON.stringify(dataStore[key] || []));
+}
+
+function loadDay(date){
+    let key = date.toISOString().slice(0,10);
+    let saved = localStorage.getItem(key);
+    dataStore[key] = saved ? JSON.parse(saved) : [];
+    redrawCanvas();
+}
 
 // ======= Draw Pixel =======
 function drawPixel(x,y){
@@ -68,44 +82,22 @@ function drawPixel(x,y){
 
 // ======= Mouse / Touch =======
 canvas.addEventListener('mousedown',()=>painting=true);
-canvas.addEventListener('mouseup',()=>painting=false);
+canvas.addEventListener('mouseup',()=>{painting=false; saveDay(currentDate);});
 canvas.addEventListener('mousemove',(e)=>{if(painting){ let rect=canvas.getBoundingClientRect(); drawPixel(e.clientX-rect.left,e.clientY-rect.top); }});
 canvas.addEventListener('touchstart',(e)=>{painting=true; let rect=canvas.getBoundingClientRect(); drawPixel(e.touches[0].clientX-rect.left,e.touches[0].clientY-rect.top); e.preventDefault();});
 canvas.addEventListener('touchmove',(e)=>{if(painting){ let rect=canvas.getBoundingClientRect(); drawPixel(e.touches[0].clientX-rect.left,e.touches[0].clientY-rect.top); } e.preventDefault();});
-canvas.addEventListener('touchend',()=>{painting=false;});
+canvas.addEventListener('touchend',()=>{painting=false; saveDay(currentDate);});
 
-// ======= Color Circle =======
-const colorCircle = document.getElementById('colorCircle');
-const ctxC = colorCircle.getContext('2d');
-const radius = colorCircle.width/2;
-
-function drawColorCircle(){
-    for(let i=0;i<360;i++){
-        for(let j=0;j<radius;j++){
-            let rad=i*Math.PI/180;
-            let x = radius + Math.cos(rad)*j;
-            let y = radius + Math.sin(rad)*j;
-            let color = `hsl(${i}, ${j/radius*100}%, 50%)`;
-            ctxC.fillStyle=color;
-            ctxC.fillRect(x,y,1,1);
-        }
+// ======= Redraw Canvas =======
+function redrawCanvas(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    let key = currentDate.toISOString().slice(0,10);
+    if(dataStore[key]){
+        dataStore[key].forEach(p=>ctx.fillStyle=p.color, ctx.fillRect(p.c*gridSize,p.r*gridSize,gridSize,gridSize));
     }
 }
-drawColorCircle();
 
-// Pick color from circle
-colorCircle.addEventListener('click',(e)=>{
-    let rect = colorCircle.getBoundingClientRect();
-    let x = e.clientX - rect.left - radius;
-    let y = e.clientY - rect.top - radius;
-    let angle = Math.atan2(y,x) * 180/Math.PI;
-    if(angle<0) angle+=360;
-    let dist = Math.sqrt(x*x+y*y);
-    if(dist>radius) return;
-    brushColor = `hsl(${angle}, ${dist/radius*100}%, 50%)`;
-});
-
-// ======= Calendar UI =======
+// ======= Calendar =======
 let calDiv = document.getElementById('calendar');
 document.getElementById('btnCalendar').onclick=()=>{
     calDiv.innerHTML='';
@@ -114,12 +106,12 @@ document.getElementById('btnCalendar').onclick=()=>{
     for(let d=1; d<=31; d++){
         let dayDiv = document.createElement('div');
         dayDiv.className='day';
-        let dateKey = currentDate.toISOString().slice(0,8)+d.toString().padStart(2,'0');
-        if(dataStore[dateKey]) dayDiv.classList.add('hasData');
+        let key = currentDate.toISOString().slice(0,8)+d.toString().padStart(2,'0');
+        if(localStorage.getItem(key)) dayDiv.classList.add('hasData');
         dayDiv.innerText=d;
         dayDiv.onclick=()=>{
             currentDate.setDate(d);
-            redrawCanvas();
+            loadDay(currentDate);
         }
         calDiv.appendChild(dayDiv);
     }
@@ -131,14 +123,17 @@ document.getElementById('btnGallery').onclick=()=>{
     galleryDiv.innerHTML='';
     galleryDiv.style.display='flex';
     calDiv.style.display='none';
-    for(let key in dataStore){
+    for(let i=0;i<localStorage.length;i++){
+        let key = localStorage.key(i);
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(key)) continue;
         let thumb = document.createElement('div');
         thumb.className='thumb';
         let imgCanvas = document.createElement('canvas');
         imgCanvas.width=cols*gridSize;
         imgCanvas.height=rows*gridSize;
         let ctx2 = imgCanvas.getContext('2d');
-        dataStore[key].forEach(p=>ctx2.fillStyle=p.color,ctx2.fillRect(p.c*gridSize,p.r*gridSize,gridSize,gridSize));
+        let saved = JSON.parse(localStorage.getItem(key));
+        saved.forEach(p=>ctx2.fillStyle=p.color, ctx2.fillRect(p.c*gridSize,p.r*gridSize,gridSize,gridSize));
         thumb.appendChild(imgCanvas);
         thumb.onclick=()=>{
             let zoom = document.getElementById('zoomView');
@@ -162,8 +157,8 @@ document.getElementById('btnSave').onclick=()=>{
 
 // ======= AI Draw =======
 document.getElementById('btnAI').onclick=()=>{
-    let dateKey = currentDate.toISOString().slice(0,10);
-    if(!dataStore[dateKey]) dataStore[dateKey]=[];
+    let key = currentDate.toISOString().slice(0,10);
+    if(!dataStore[key]) dataStore[key]=[];
     for(let i=0;i<50;i++){
         let r = Math.floor(Math.random()*rows);
         let c = Math.floor(Math.random()*cols);
@@ -171,21 +166,13 @@ document.getElementById('btnAI').onclick=()=>{
         let color = `hsl(${hue}, 100%, 50%)`;
         ctx.fillStyle=color;
         ctx.fillRect(c*gridSize,r*gridSize,gridSize,gridSize);
-        dataStore[dateKey].push({r,c,color});
+        dataStore[key].push({r,c,color});
     }
+    saveDay(currentDate);
 };
 
-// ======= Redraw Canvas for current date =======
-function redrawCanvas(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    let dateKey = currentDate.toISOString().slice(0,10);
-    if(dataStore[dateKey]){
-        dataStore[dateKey].forEach(p=>ctx.fillStyle=p.color, ctx.fillRect(p.c*gridSize,p.r*gridSize,gridSize,gridSize));
-    }
-}
-
-// Initial draw
-redrawCanvas();
+// ======= Init =======
+loadDay(currentDate);
 </script>
 
 </body>

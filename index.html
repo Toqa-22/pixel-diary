@@ -3,231 +3,190 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pixel Diary Ultra 🎨</title>
+<title>Pixel Diary AI 🎨</title>
 <style>
-* {margin:0; padding:0; box-sizing:border-box;}
-body {font-family: Arial, sans-serif; background:#141414; color:#eee; overflow-x:hidden;}
-#toolbar {
-    position: fixed; top:0; left:0;
-    width: 220px; height: 100%;
-    background:#1f1f1f; padding:15px; overflow-y:auto; transition: transform 0.3s ease; z-index: 10;
-}
-#toolbar.hide { transform: translateX(-100%);}
-#toolbar h2 { font-size: 20px; margin-bottom:10px; text-align:center;}
-#toolbar h3 { font-size:16px; margin:10px 0 5px 0;}
-.color { width:35px; height:35px; border-radius:50%; margin:5px; cursor:pointer; display:inline-block; border:2px solid #333;}
-.color.selected { border:2px solid #fff;}
-#colorPicker { width:100%; margin:5px 0; height:35px; border:none; cursor:pointer; border-radius:6px; }
-.brush { margin:5px 5px 5px 0; padding:6px 12px; cursor:pointer; background:#333; border:none; color:white; border-radius:6px; font-size:14px;}
-button:hover, .brush:hover { background:#555;}
-#canvas-container { margin-left: 220px; height:100vh; display:flex; justify-content:center; align-items:center; padding:10px; }
-canvas { background:#1a1a1a; border:1px solid #555; touch-action:none; }
-#toggleToolbar { display:none; position:fixed; top:15px; left:15px; background:#333; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; z-index:20; }
-
-#calendar {margin-top:15px;}
-.day {display:inline-block; width:30px; height:30px; margin:3px; text-align:center; line-height:30px; cursor:pointer; border-radius:4px; background:#2a2a2a;}
-.day.hasData { background:#5090ff; }
-.day.selected { border:2px solid #fff; }
-
-#gallery-container {position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); display:none; justify-content:center; align-items:flex-start; z-index:50; flex-wrap:wrap; overflow:auto; padding:20px; transition: all 0.5s;}
-.gallery-img {margin:10px; width:150px; height:150px; object-fit:cover; cursor:pointer; transition: transform 0.3s; border:1px solid #555;}
-.gallery-img:hover {transform: scale(1.1);}
-#zoom-overlay {position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); display:none; justify-content:center; align-items:center; z-index:60;}
-#zoom-overlay canvas {max-width:90%; max-height:90%; animation:fadeIn 0.3s;}
-@keyframes fadeIn { from {opacity:0; transform:scale(0.8);} to {opacity:1; transform:scale(1);} }
-
-@media(max-width:800px){
-    #toolbar { width:180px; }
-    #canvas-container { margin-left:0; padding-left:10px; padding-right:10px;}
-    #toggleToolbar { display:block; }
-}
+body {margin:0; font-family:sans-serif; background:#18191f; color:#eee; display:flex; flex-direction:column; align-items:center;}
+#topbar {display:flex; justify-content:center; gap:10px; margin:10px;}
+button {padding:8px 12px; border:none; border-radius:8px; background:#4a4a6a; color:#fff; cursor:pointer;}
+button:hover{background:#606090;}
+#colorpicker {position:relative; width:220px; height:220px; margin:10px;}
+canvas#colorCircle {border-radius:50%;}
+#calendar, #gallery {display:none; flex-wrap:wrap; justify-content:center; margin:10px;}
+.day, .thumb {width:60px; height:60px; margin:5px; display:flex; align-items:center; justify-content:center; border-radius:8px; cursor:pointer; background:#3a3a5a; color:#fff; font-weight:bold;}
+.day.hasData{background:#50a0ff;}
+.thumb canvas{width:100%; height:100%; border-radius:8px; object-fit:cover; transition: transform 0.3s;}
+.thumb:hover canvas{transform:scale(1.1);}
+canvas#mainCanvas {border:1px solid #444; touch-action:none;}
+#zoomView {position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; display:none;}
+#zoomView img{max-width:90%; max-height:90%; border-radius:12px; animation:zoomIn 0.3s;}
+@keyframes zoomIn {from{transform:scale(0)} to{transform:scale(1)}}
 </style>
 </head>
 <body>
 
-<button id="toggleToolbar">☰ Menu</button>
+<h1>Pixel Diary AI 🎨</h1>
 
-<div id="toolbar">
-    <h2>Pixel Diary Ultra</h2>
-
-    <div>
-        <h3>Colors</h3>
-        <div id="palette"></div>
-        <input type="color" id="colorPicker" value="#FF3B30">
-    </div>
-
-    <div>
-        <h3>Brush</h3>
-        <button class="brush" data-type="square">Square</button>
-        <button class="brush" data-type="circle">Circle</button>
-        <button class="brush" data-type="glow">Glow</button>
-        <button class="brush" data-type="gradient">Gradient</button>
-    </div>
-
-    <div>
-        <h3>Actions</h3>
-        <button id="saveBtn">Save PNG</button>
-        <button id="clearBtn">Clear</button>
-        <button id="aiBtn">AI Draw</button>
-        <button id="openGalleryBtn">Gallery</button>
-    </div>
-
-    <div>
-        <h3>Calendar</h3>
-        <div id="calendar"></div>
-    </div>
+<div id="topbar">
+    <button id="btnCalendar">📅 Calendar</button>
+    <button id="btnGallery">🖼️ Gallery</button>
+    <button id="btnAI">🤖 AI Draw</button>
+    <button id="btnSave">💾 Save Image</button>
 </div>
 
-<div id="canvas-container">
-    <canvas id="canvas"></canvas>
+<div id="colorpicker">
+    <canvas id="colorCircle" width="220" height="220"></canvas>
 </div>
 
-<div id="gallery-container"></div>
-<div id="zoom-overlay"><canvas id="zoom-canvas"></canvas></div>
+<canvas id="mainCanvas" width="500" height="500"></canvas>
+
+<div id="calendar"></div>
+<div id="gallery"></div>
+<div id="zoomView"><img src="" alt="zoomed"></div>
 
 <script>
-const canvas=document.getElementById("canvas"), ctx=canvas.getContext("2d");
-let ROWS=25, COLS=25, PIXEL;
-let currentDate=new Date();
-let painting=false;
-let brushType="square";
+// ======= Global =======
+let canvas = document.getElementById('mainCanvas');
+let ctx = canvas.getContext('2d');
+let painting = false;
+let brushColor = '#ff0000';
+let gridSize = 20;
+let rows = canvas.height / gridSize;
+let cols = canvas.width / gridSize;
+let currentDate = new Date();
+let dataStore = {}; // { 'YYYY-MM-DD': [pixels...] }
 
-// Palette colors
-const paletteColors=["#FF3B30","#FF9500","#FFCC00","#34C759","#5AC8FA","#007AFF","#5856D6","#FF2D55"];
-let currentColor=paletteColors[0];
-
-// Grid per day stored in LocalStorage
-function getKey(date){ return "pixel_diary_"+date.toISOString().slice(0,10); }
-function loadGrid(){ let data=localStorage.getItem(getKey(currentDate)); return data?JSON.parse(data):Array.from({length:ROWS},()=>Array(COLS).fill(null)); }
-function saveGrid(){ localStorage.setItem(getKey(currentDate),JSON.stringify(grid)); }
-let grid=loadGrid();
-
-// Resize canvas
-function resizeCanvas(){ const container=document.getElementById("canvas-container"); const size=Math.min(container.clientWidth, container.clientHeight)*0.95; canvas.width=size; canvas.height=size; PIXEL=canvas.width/COLS; draw(); }
-window.addEventListener("resize",resizeCanvas);
-resizeCanvas();
-
-// Palette UI
-const paletteDiv=document.getElementById("palette");
-function updatePalette(){
-    paletteDiv.innerHTML="";
-    paletteColors.forEach(color=>{
-        let div=document.createElement("div");
-        div.className="color";
-        div.style.background=color;
-        if(color===currentColor) div.classList.add("selected");
-        div.onclick=()=>{
-            currentColor=color;
-            document.querySelectorAll(".color").forEach(c=>c.classList.remove("selected"));
-            div.classList.add("selected");
-            document.getElementById("colorPicker").value=color;
-        }
-        paletteDiv.appendChild(div);
-    });
+// ======= Draw Pixel =======
+function drawPixel(x,y){
+    let r = Math.floor(y / gridSize);
+    let c = Math.floor(x / gridSize);
+    ctx.fillStyle = brushColor;
+    ctx.fillRect(c*gridSize,r*gridSize,gridSize,gridSize);
+    let dateKey = currentDate.toISOString().slice(0,10);
+    if(!dataStore[dateKey]) dataStore[dateKey]=[];
+    dataStore[dateKey].push({r,c,color:brushColor});
 }
-updatePalette();
 
-// Color Picker
-document.getElementById("colorPicker").addEventListener("input",(e)=>{
-    currentColor=e.target.value;
-    updatePalette();
-});
+// ======= Mouse / Touch =======
+canvas.addEventListener('mousedown',()=>painting=true);
+canvas.addEventListener('mouseup',()=>painting=false);
+canvas.addEventListener('mousemove',(e)=>{if(painting){ let rect=canvas.getBoundingClientRect(); drawPixel(e.clientX-rect.left,e.clientY-rect.top); }});
+canvas.addEventListener('touchstart',(e)=>{painting=true; let rect=canvas.getBoundingClientRect(); drawPixel(e.touches[0].clientX-rect.left,e.touches[0].clientY-rect.top); e.preventDefault();});
+canvas.addEventListener('touchmove',(e)=>{if(painting){ let rect=canvas.getBoundingClientRect(); drawPixel(e.touches[0].clientX-rect.left,e.touches[0].clientY-rect.top); } e.preventDefault();});
+canvas.addEventListener('touchend',()=>{painting=false;});
 
-// Draw grid
-function draw(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    for(let r=0;r<ROWS;r++){
-        for(let c=0;c<COLS;c++){
-            ctx.fillStyle=grid[r][c]||"#1a1a1a";
-            ctx.fillRect(c*PIXEL,r*PIXEL,PIXEL,PIXEL);
-            ctx.strokeStyle="#555";
-            ctx.strokeRect(c*PIXEL,r*PIXEL,PIXEL,PIXEL);
+// ======= Color Circle =======
+const colorCircle = document.getElementById('colorCircle');
+const ctxC = colorCircle.getContext('2d');
+const radius = colorCircle.width/2;
+
+function drawColorCircle(){
+    for(let i=0;i<360;i++){
+        for(let j=0;j<radius;j++){
+            let rad=i*Math.PI/180;
+            let x = radius + Math.cos(rad)*j;
+            let y = radius + Math.sin(rad)*j;
+            let color = `hsl(${i}, ${j/radius*100}%, 50%)`;
+            ctxC.fillStyle=color;
+            ctxC.fillRect(x,y,1,1);
         }
     }
 }
+drawColorCircle();
 
-// Paint function
-function paint(x,y){
-    const c=Math.floor(x/PIXEL), r=Math.floor(y/PIXEL);
-    if(c<0||c>=COLS||r<0||r>=ROWS) return;
-    if(brushType=="square") grid[r][c]=currentColor;
-    else if(brushType=="circle"){ let radius=1; for(let i=-radius;i<=radius;i++){for(let j=-radius;j<=radius;j++){ if(i*i+j*j<=radius*radius){ let nr=r+i,nc=c+j; if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS) grid[nr][nc]=currentColor; }}}}
-    else if(brushType=="glow"){ for(let i=-2;i<=2;i++){for(let j=-2;j<=2;j++){ let nr=r+i,nc=c+j; if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS) grid[nr][nc]=currentColor;}}}
-    else if(brushType=="gradient"){ let radius=3; for(let i=-radius;i<=radius;i++){for(let j=-radius;j<=radius;j++){ let nr=r+i,nc=c+j; if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS){ let dist=Math.sqrt(i*i+j*j); if(dist<=radius) grid[nr][nc]=currentColor; }}}}
-    draw();
-}
+// Pick color from circle
+colorCircle.addEventListener('click',(e)=>{
+    let rect = colorCircle.getBoundingClientRect();
+    let x = e.clientX - rect.left - radius;
+    let y = e.clientY - rect.top - radius;
+    let angle = Math.atan2(y,x) * 180/Math.PI;
+    if(angle<0) angle+=360;
+    let dist = Math.sqrt(x*x+y*y);
+    if(dist>radius) return;
+    brushColor = `hsl(${angle}, ${dist/radius*100}%, 50%)`;
+});
 
-// Mouse events
-canvas.addEventListener("mousedown",()=>painting=true);
-canvas.addEventListener("mouseup",()=>{painting=false; saveGrid();});
-canvas.addEventListener("mousemove",(e)=>{if(painting) paint(e.offsetX,e.offsetY);});
-canvas.addEventListener("click",(e)=>{paint(e.offsetX,e.offsetY); saveGrid();});
+// ======= Calendar UI =======
+let calDiv = document.getElementById('calendar');
+document.getElementById('btnCalendar').onclick=()=>{
+    calDiv.innerHTML='';
+    calDiv.style.display='flex';
+    galleryDiv.style.display='none';
+    for(let d=1; d<=31; d++){
+        let dayDiv = document.createElement('div');
+        dayDiv.className='day';
+        let dateKey = currentDate.toISOString().slice(0,8)+d.toString().padStart(2,'0');
+        if(dataStore[dateKey]) dayDiv.classList.add('hasData');
+        dayDiv.innerText=d;
+        dayDiv.onclick=()=>{
+            currentDate.setDate(d);
+            redrawCanvas();
+        }
+        calDiv.appendChild(dayDiv);
+    }
+};
 
-// Brush buttons
-document.querySelectorAll(".brush").forEach(btn=>{ btn.addEventListener("click",()=>brushType=btn.dataset.type); });
+// ======= Gallery =======
+let galleryDiv = document.getElementById('gallery');
+document.getElementById('btnGallery').onclick=()=>{
+    galleryDiv.innerHTML='';
+    galleryDiv.style.display='flex';
+    calDiv.style.display='none';
+    for(let key in dataStore){
+        let thumb = document.createElement('div');
+        thumb.className='thumb';
+        let imgCanvas = document.createElement('canvas');
+        imgCanvas.width=cols*gridSize;
+        imgCanvas.height=rows*gridSize;
+        let ctx2 = imgCanvas.getContext('2d');
+        dataStore[key].forEach(p=>ctx2.fillStyle=p.color,ctx2.fillRect(p.c*gridSize,p.r*gridSize,gridSize,gridSize));
+        thumb.appendChild(imgCanvas);
+        thumb.onclick=()=>{
+            let zoom = document.getElementById('zoomView');
+            zoom.children[0].src = imgCanvas.toDataURL();
+            zoom.style.display='flex';
+        }
+        galleryDiv.appendChild(thumb);
+    }
+};
+document.getElementById('zoomView').onclick=()=>{document.getElementById('zoomView').style.display='none';}
 
-// Actions
-document.getElementById("saveBtn").addEventListener("click",()=>{
-    const link=document.createElement("a");
-    link.download="PixelDiary_"+currentDate.toISOString().slice(0,10)+".png";
-    link.href=canvas.toDataURL();
+// ======= Save Image =======
+document.getElementById('btnSave').onclick=()=>{
+    let name = prompt("اسم الصورة:");
+    if(!name) return;
+    let link = document.createElement('a');
+    link.download = name+".png";
+    link.href = canvas.toDataURL();
     link.click();
-});
-document.getElementById("clearBtn").addEventListener("click",()=>{ grid=Array.from({length:ROWS},()=>Array(COLS).fill(null)); draw(); saveGrid(); });
-document.getElementById("aiBtn").addEventListener("click",()=>{ for(let i=0;i<30;i++){ let r=Math.floor(Math.random()*ROWS), c=Math.floor(Math.random()*COLS); grid[r][c]=paletteColors[Math.floor(Math.random()*paletteColors.length)]; } draw(); saveGrid(); });
+};
 
-// Toggle toolbar
-document.getElementById("toggleToolbar").addEventListener("click",()=>{ document.getElementById("toolbar").classList.toggle("hide"); });
+// ======= AI Draw =======
+document.getElementById('btnAI').onclick=()=>{
+    let dateKey = currentDate.toISOString().slice(0,10);
+    if(!dataStore[dateKey]) dataStore[dateKey]=[];
+    for(let i=0;i<50;i++){
+        let r = Math.floor(Math.random()*rows);
+        let c = Math.floor(Math.random()*cols);
+        let hue = Math.floor(Math.random()*360);
+        let color = `hsl(${hue}, 100%, 50%)`;
+        ctx.fillStyle=color;
+        ctx.fillRect(c*gridSize,r*gridSize,gridSize,gridSize);
+        dataStore[dateKey].push({r,c,color});
+    }
+};
 
-// Calendar
-const calendarDiv=document.getElementById("calendar");
-function drawCalendar(){
-    calendarDiv.innerHTML="";
-    for(let d=1;d<=30;d++){
-        let day=document.createElement("div"); day.className="day"; day.innerText=d;
-        let key=new Date(currentDate.getFullYear(),currentDate.getMonth(),d);
-        if(localStorage.getItem(getKey(key))) day.classList.add("hasData");
-        if(d===currentDate.getDate()) day.classList.add("selected");
-        day.onclick=()=>{
-            currentDate.setDate(d); grid=loadGrid(); draw();
-            document.querySelectorAll(".day").forEach(dd=>dd.classList.remove("selected"));
-            day.classList.add("selected");
-        };
-        calendarDiv.appendChild(day);
+// ======= Redraw Canvas for current date =======
+function redrawCanvas(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    let dateKey = currentDate.toISOString().slice(0,10);
+    if(dataStore[dateKey]){
+        dataStore[dateKey].forEach(p=>ctx.fillStyle=p.color, ctx.fillRect(p.c*gridSize,p.r*gridSize,gridSize,gridSize));
     }
 }
-drawCalendar();
 
-// Gallery
-const galleryContainer=document.getElementById("gallery-container");
-const zoomOverlay=document.getElementById("zoom-overlay");
-const zoomCanvas=document.getElementById("zoom-canvas");
-const zoomCtx=zoomCanvas.getContext("2d");
-document.getElementById("openGalleryBtn").addEventListener("click",()=>{
-    galleryContainer.innerHTML="";
-    for(let d=1;d<=30;d++){
-        let key=new Date(currentDate.getFullYear(),currentDate.getMonth(),d);
-        let data=localStorage.getItem(getKey(key));
-        if(!data) continue;
-        let dayGrid=JSON.parse(data);
-        let gCanvas=document.createElement("canvas"); gCanvas.width=50; gCanvas.height=50;
-        let gCtx=gCanvas.getContext("2d");
-        let cellW=50/COLS, cellH=50/ROWS;
-        for(let r=0;r<ROWS;r++){ for(let c=0;c<COLS;c++){ gCtx.fillStyle=dayGrid[r][c]||"#1a1a1a"; gCtx.fillRect(c*cellW,r*cellH,cellW,cellH); }}
-        gCanvas.className="gallery-img";
-        gCanvas.onclick=()=>{
-            zoomOverlay.style.display="flex";
-            zoomCanvas.width=canvas.width;
-            zoomCanvas.height=canvas.height;
-            for(let r=0;r<ROWS;r++){for(let c=0;c<COLS;c++){ zoomCtx.fillStyle=dayGrid[r][c]||"#1a1a1a"; zoomCtx.fillRect(c*PIXEL,r*PIXEL,PIXEL,PIXEL); }}
-        };
-        galleryContainer.appendChild(gCanvas);
-    }
-    galleryContainer.style.display="flex";
-});
-galleryContainer.addEventListener("click",(e)=>{ if(e.target===galleryContainer) galleryContainer.style.display="none"; zoomOverlay.style.display="none"; });
-
-draw();
+// Initial draw
+redrawCanvas();
 </script>
+
 </body>
 </html>
